@@ -30904,6 +30904,206 @@ application of the status of asynchronous tasks.</doc>
          posted on the bus.</doc>
       </member>
     </enumeration>
+    <record name="Promise"
+            c:type="GstPromise"
+            glib:type-name="GstPromise"
+            glib:get-type="gst_promise_get_type"
+            c:symbol-prefix="promise">
+      <doc xml:space="preserve">The #GstPromise object implements the container for values that may
+be available later. i.e. a Future or a Promise in
+&lt;ulink url="https://en.wikipedia.org/wiki/Futures_and_promises"&gt;https://en.wikipedia.org/wiki/Futures_and_promises&lt;/ulink&gt;
+
+A #GstPromise can be created with gst_promise_new(), replied to
+with gst_promise_reply(), interrupted with gst_promise_reply() and
+expired with gst_promise_expire(). A callback can also be installed for
+result changes with gst_promise_set_change_callback().
+
+Each #GstPromise starts out with a #GstPromiseResult of
+%GST_PROMISE_RESULT_PENDING and only ever transitions out of that result
+into one of the other #GstPromiseResult.
+
+In order to support multi-threaded code, gst_promise_reply(),
+gst_promise_interrupt() and gst_promise_expire() may all be from
+different threads with some restrictions, the final result of the promise
+is whichever call is made first.  There are two restrictions on ordering:
+
+1. That gst_promise_reply() and gst_promise_interrupt() cannot be called
+after gst_promise_expire()
+2. That gst_promise_reply() and gst_promise_interrupt()
+cannot be called twice.</doc>
+      <field name="parent" writable="1">
+        <doc xml:space="preserve">parent #GstMiniObject</doc>
+        <type name="MiniObject" c:type="GstMiniObject"/>
+      </field>
+      <field name="result" writable="1">
+        <doc xml:space="preserve">#GstPromiseResult state the promise is in</doc>
+        <type name="PromiseResult" c:type="GstPromiseResult"/>
+      </field>
+      <field name="promise" writable="1">
+        <doc xml:space="preserve">#GstStructure for the data that has been replied</doc>
+        <type name="Structure" c:type="GstStructure*"/>
+      </field>
+      <field name="lock" readable="0" private="1">
+        <type name="GLib.Mutex" c:type="GMutex"/>
+      </field>
+      <field name="cond" readable="0" private="1">
+        <type name="GLib.Cond" c:type="GCond"/>
+      </field>
+      <field name="change_func" readable="0" private="1">
+        <type name="PromiseChangeFunc" c:type="GstPromiseChangeFunc"/>
+      </field>
+      <field name="user_data" readable="0" private="1">
+        <type name="gpointer" c:type="gpointer"/>
+      </field>
+      <field name="notify" readable="0" private="1">
+        <type name="GLib.DestroyNotify" c:type="GDestroyNotify"/>
+      </field>
+      <field name="_padding" readable="0" private="1">
+        <array zero-terminated="0" c:type="gpointer" fixed-size="4">
+          <type name="gpointer" c:type="gpointer"/>
+        </array>
+      </field>
+      <constructor name="new" c:identifier="gst_promise_new">
+        <return-value transfer-ownership="full">
+          <doc xml:space="preserve">a new #GstPromise</doc>
+          <type name="Promise" c:type="GstPromise*"/>
+        </return-value>
+      </constructor>
+      <method name="expire" c:identifier="gst_promise_expire">
+        <doc xml:space="preserve">Expire a @promise.  This will wake up any waiters with
+%GST_PROMISE_RESULT_EXPIRED</doc>
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+        <parameters>
+          <instance-parameter name="promise" transfer-ownership="none">
+            <doc xml:space="preserve">a #GstPromise</doc>
+            <type name="Promise" c:type="GstPromise*"/>
+          </instance-parameter>
+        </parameters>
+      </method>
+      <method name="interrupt" c:identifier="gst_promise_interrupt">
+        <doc xml:space="preserve">Interrupt waiting for a @promise.  This will wake up any waiters with
+%GST_PROMISE_RESULT_INTERRUPTED</doc>
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+        <parameters>
+          <instance-parameter name="promise" transfer-ownership="none">
+            <doc xml:space="preserve">a #GstPromise</doc>
+            <type name="Promise" c:type="GstPromise*"/>
+          </instance-parameter>
+        </parameters>
+      </method>
+      <method name="reply" c:identifier="gst_promise_reply">
+        <doc xml:space="preserve">@promise (allow-none): a #GstPromise
+Set a reply on @promise.  This will wake up any waiters with
+%GST_PROMISE_RESULT_REPLIED.</doc>
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+        <parameters>
+          <instance-parameter name="promise" transfer-ownership="none">
+            <type name="Promise" c:type="GstPromise*"/>
+          </instance-parameter>
+          <parameter name="s" transfer-ownership="full">
+            <doc xml:space="preserve">a #GstStructure with the the reply contents</doc>
+            <type name="Structure" c:type="GstStructure*"/>
+          </parameter>
+        </parameters>
+      </method>
+      <method name="set_change_callback"
+              c:identifier="gst_promise_set_change_callback">
+        <return-value transfer-ownership="none">
+          <type name="none" c:type="void"/>
+        </return-value>
+        <parameters>
+          <instance-parameter name="promise" transfer-ownership="none">
+            <type name="Promise" c:type="GstPromise*"/>
+          </instance-parameter>
+          <parameter name="func"
+                     transfer-ownership="none"
+                     scope="notified"
+                     closure="1"
+                     destroy="2">
+            <type name="PromiseChangeFunc" c:type="GstPromiseChangeFunc"/>
+          </parameter>
+          <parameter name="user_data"
+                     transfer-ownership="none"
+                     nullable="1"
+                     allow-none="1">
+            <type name="gpointer" c:type="gpointer"/>
+          </parameter>
+          <parameter name="notify" transfer-ownership="none" scope="async">
+            <type name="GLib.DestroyNotify" c:type="GDestroyNotify"/>
+          </parameter>
+        </parameters>
+      </method>
+      <method name="wait" c:identifier="gst_promise_wait">
+        <doc xml:space="preserve">Wait for @promise to move out of the %GST_PROMISE_RESULT_PENDING state.
+If @promise is not in %GST_PROMISE_RESULT_PENDING then it will return
+immediately with the current result.</doc>
+        <return-value transfer-ownership="none">
+          <doc xml:space="preserve">the result of the promise</doc>
+          <type name="PromiseResult" c:type="GstPromiseResult"/>
+        </return-value>
+        <parameters>
+          <instance-parameter name="promise" transfer-ownership="none">
+            <doc xml:space="preserve">a #GstPromise</doc>
+            <type name="Promise" c:type="GstPromise*"/>
+          </instance-parameter>
+        </parameters>
+      </method>
+    </record>
+    <callback name="PromiseChangeFunc" c:type="GstPromiseChangeFunc">
+      <return-value transfer-ownership="none">
+        <type name="none" c:type="void"/>
+      </return-value>
+      <parameters>
+        <parameter name="promise" transfer-ownership="none">
+          <doc xml:space="preserve">a #GstPromise</doc>
+          <type name="Promise" c:type="GstPromise*"/>
+        </parameter>
+        <parameter name="user_data"
+                   transfer-ownership="none"
+                   nullable="1"
+                   allow-none="1"
+                   closure="1">
+          <doc xml:space="preserve">user data</doc>
+          <type name="gpointer" c:type="gpointer"/>
+        </parameter>
+      </parameters>
+    </callback>
+    <enumeration name="PromiseResult"
+                 glib:type-name="GstPromiseResult"
+                 glib:get-type="gst_promise_result_get_type"
+                 c:type="GstPromiseResult">
+      <doc xml:space="preserve">The result of a #GstPromise</doc>
+      <member name="pending"
+              value="0"
+              c:identifier="GST_PROMISE_RESULT_PENDING"
+              glib:nick="pending">
+        <doc xml:space="preserve">Initial state</doc>
+      </member>
+      <member name="interrupted"
+              value="1"
+              c:identifier="GST_PROMISE_RESULT_INTERRUPTED"
+              glib:nick="interrupted">
+        <doc xml:space="preserve">Interrupted by caller, other state changes ignored</doc>
+      </member>
+      <member name="replied"
+              value="2"
+              c:identifier="GST_PROMISE_RESULT_REPLIED"
+              glib:nick="replied">
+        <doc xml:space="preserve">a receiver marked a reply</doc>
+      </member>
+      <member name="expired"
+              value="3"
+              c:identifier="GST_PROMISE_RESULT_EXPIRED"
+              glib:nick="expired">
+        <doc xml:space="preserve">The promise expired (the carrying message lost all refs)</doc>
+      </member>
+    </enumeration>
     <record name="ProtectionMeta" c:type="GstProtectionMeta" version="1.6">
       <doc xml:space="preserve">Metadata type that holds information about a sample from a protection-protected
 track, including the information needed to decrypt it (if it is encrypted).</doc>

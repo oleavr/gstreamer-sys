@@ -219,6 +219,12 @@ pub const GST_PROGRESS_TYPE_COMPLETE: GstProgressType = 2;
 pub const GST_PROGRESS_TYPE_CANCELED: GstProgressType = 3;
 pub const GST_PROGRESS_TYPE_ERROR: GstProgressType = 4;
 
+pub type GstPromiseResult = c_int;
+pub const GST_PROMISE_RESULT_PENDING: GstPromiseResult = 0;
+pub const GST_PROMISE_RESULT_INTERRUPTED: GstPromiseResult = 1;
+pub const GST_PROMISE_RESULT_REPLIED: GstPromiseResult = 2;
+pub const GST_PROMISE_RESULT_EXPIRED: GstPromiseResult = 3;
+
 pub type GstQOSType = c_int;
 pub const GST_QOS_TYPE_OVERFLOW: GstQOSType = 0;
 pub const GST_QOS_TYPE_UNDERFLOW: GstQOSType = 1;
@@ -1319,6 +1325,7 @@ pub type GstPluginFeatureFilter = Option<unsafe extern "C" fn(*mut GstPluginFeat
 pub type GstPluginFilter = Option<unsafe extern "C" fn(*mut GstPlugin, gpointer) -> gboolean>;
 pub type GstPluginInitFullFunc = Option<unsafe extern "C" fn(*mut GstPlugin, gpointer) -> gboolean>;
 pub type GstPluginInitFunc = Option<unsafe extern "C" fn(*mut GstPlugin) -> gboolean>;
+pub type GstPromiseChangeFunc = Option<unsafe extern "C" fn(*mut GstPromise, gpointer)>;
 pub type GstStructureFilterMapFunc = Option<unsafe extern "C" fn(glib::GQuark, *mut gobject::GValue, gpointer) -> gboolean>;
 pub type GstStructureForeachFunc = Option<unsafe extern "C" fn(glib::GQuark, *const gobject::GValue, gpointer) -> gboolean>;
 pub type GstStructureMapFunc = Option<unsafe extern "C" fn(glib::GQuark, *mut gobject::GValue, gpointer) -> gboolean>;
@@ -1808,6 +1815,19 @@ pub struct GstPresetInterface {
     pub set_meta: Option<unsafe extern "C" fn(*mut GstPreset, *const c_char, *const c_char, *mut *mut c_char) -> gboolean>,
     pub get_meta: Option<unsafe extern "C" fn(*mut GstPreset, *const c_char, *const c_char, *mut *mut c_char) -> gboolean>,
     pub _gst_reserved: [gpointer; 4],
+}
+
+#[repr(C)]
+pub struct GstPromise {
+    pub parent: GstMiniObject,
+    pub result: GstPromiseResult,
+    pub promise: *mut GstStructure,
+    pub lock: glib::GMutex,
+    pub cond: glib::GCond,
+    pub change_func: GstPromiseChangeFunc,
+    pub user_data: gpointer,
+    pub notify: glib::GDestroyNotify,
+    pub _padding: [gpointer; 4],
 }
 
 #[repr(C)]
@@ -2475,6 +2495,11 @@ extern "C" {
     // GstProgressType
     //=========================================================================
     pub fn gst_progress_type_get_type() -> GType;
+
+    //=========================================================================
+    // GstPromiseResult
+    //=========================================================================
+    pub fn gst_promise_result_get_type() -> GType;
 
     //=========================================================================
     // GstQOSType
@@ -3399,6 +3424,17 @@ extern "C" {
     // GstPollFD
     //=========================================================================
     pub fn gst_poll_fd_init(fd: *mut GstPollFD);
+
+    //=========================================================================
+    // GstPromise
+    //=========================================================================
+    pub fn gst_promise_get_type() -> GType;
+    pub fn gst_promise_new() -> *mut GstPromise;
+    pub fn gst_promise_expire(promise: *mut GstPromise);
+    pub fn gst_promise_interrupt(promise: *mut GstPromise);
+    pub fn gst_promise_reply(promise: *mut GstPromise, s: *mut GstStructure);
+    pub fn gst_promise_set_change_callback(promise: *mut GstPromise, func: GstPromiseChangeFunc, user_data: gpointer, notify: glib::GDestroyNotify);
+    pub fn gst_promise_wait(promise: *mut GstPromise) -> GstPromiseResult;
 
     //=========================================================================
     // GstProtectionMeta
