@@ -11,4 +11,5 @@ members = [
   "gstreamer-player-sys",
   "gstreamer-mpegts-sys",
   "gstreamer-sdp-sys",
+  "gstreamer-webrtc-sys",
 ]
